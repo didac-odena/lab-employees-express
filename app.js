@@ -1,69 +1,102 @@
-const express = require("express");
-const app = express();
+import express from "express";
+import employees from "./employees.json" with { type: "json" };
 
+const app = express();
 app.use(express.json());
 
-const employees = require("./employees.json");
 
-employees.forEach((e, i) => (e.id = i));
+//Endpoint 7
+app.get("/api/employees/:name", (req, res) => {
+  const filterName = req.params.name;
+  const employeeFound = employees.find(
+    (employee) => employee.name === filterName,
+  );
 
-// Iteration 6
+  if (!employeeFound) {
+    return res.status(404).json({ code: "not_found" });
+  }
+
+  return res.json(employeeFound);
+});
+
+
+//Endpoint 6
+app.get("/api/employees", (req, res) => {
+  const badge = req.query.badges;
+
+  if (badge) {
+    const filteredEmployees = employees.filter((employee) =>
+      employee.badges.includes(badge),
+    );
+    return res.json(filteredEmployees);
+  }
+
+  return res.json(employees);
+});
+
+//Endpoint 5
 app.post("/api/employees", (req, res) => {
   const newEmployee = req.body;
 
-  if (!newEmployee.age) {
+  const hasValidBody =
+    newEmployee &&
+    typeof newEmployee.name === "string" &&
+    typeof newEmployee.age === "number" &&
+    newEmployee.phone &&
+    typeof newEmployee.phone.personal === "string" &&
+    typeof newEmployee.phone.work === "string" &&
+    typeof newEmployee.phone.ext === "string" &&
+    (newEmployee.privileges === "user" || newEmployee.privileges === "admin") &&
+    newEmployee.favorites &&
+    typeof newEmployee.favorites.artist === "string" &&
+    typeof newEmployee.favorites.food === "string" &&
+    Array.isArray(newEmployee.finished) &&
+    Array.isArray(newEmployee.badges) &&
+    Array.isArray(newEmployee.points);
+
+  if (!hasValidBody) {
     return res.status(400).json({ code: "bad_request" });
   }
 
   employees.push(newEmployee);
-
-  res.json(newEmployee);
+  return res.status(201).json(newEmployee);
 });
 
+//Endpoint 4
+app.get("/api/employees", (req, res) => {
+  const user = req.query.user;
+  if (user === "true") {
+    const users = employees.filter(
+      (employee) => employee.privileges === "user",
+    );
+    return res.json(users);
+  }
+
+  return res.json(employees);
+});
+
+//Endpoint 3
+app.get("/api/employees/oldest", (req, res) => {
+  const oldest = employees.reduce((max, employee) =>
+    employee.age > max.age ? employee : max,
+  );
+
+  return res.json(oldest);
+});
+
+//Endpoint 2
 app.get("/api/employees", (req, res) => {
   const page = req.query.page;
 
-  if (req.query.badges === "black") {
-    // Iteration 7
-    res.json(employees.filter((e) => e.badges.includes("black")));
-  } else if (req.query.user) {
-    // Iteration 5
-    res.json(employees.filter((e) => e.privileges === "user"));
-  } else if (page === undefined) {
-    // Iteration 1
-    res.json(employees);
-  } else {
-    // Iteration 2, 3
-    const num = +page;
-    const from = 2 * (num - 1);
+  const startElem = 2 * (page - 1);
+  const endElem = startElem + 2;
 
-    res.json(employees.slice(from, from + 2));
-  }
+  return res.json(employees.slice(startElem, endElem));
 });
 
-// Iteration 4
-app.get("/api/employees/oldest", (req, res) => {
-  const maxAge = employees.reduce(
-    (acc, el) => (el.age > acc ? el.age : acc),
-    0
-  );
+app.listen(3000, () => {});
 
-  const oldestEmployee = employees.find((el) => el.age === maxAge, 0);
-
-  res.json(oldestEmployee);
-});
-
-// Iteration 8
-app.get("/api/employees/:name", (req, res) => {
-  const employee = employees.find((e) => e.name === req.params.name);
-
-  if (employee) {
-    res.json(employee);
-  } else {
-    res.status(404).json({ code: "not_found" });
-  }
-});
-
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
+//Endpoint 1
+app.get("/api/employees", (req, res) => {
+  res.json(employees);
 });
